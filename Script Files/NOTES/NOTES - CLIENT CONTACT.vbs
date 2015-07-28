@@ -32,6 +32,9 @@ ELSE														'Error message, tells user to try to reach github.com, otherwi
 			StopScript
 END IF
 
+'DIM contact_dialog, contact_type_cp, contact_type_ncp, contact_type_other, verified_ID_check, PRISM_case_number, phone_number, time_contact_was_made, issue, actions_taken, verifs_needed, special_instructions_for_client, left_generic_message_check, worker_signature, ButtonPressed, create_mainframe_friendly_date
+
+
 'DIALOGS----------------------------------------------------------------------------------------------------
 BeginDialog contact_dialog, 0, 0, 381, 295, "Client contact"
   DropListBox 80, 15, 260, 15, ""+chr(9)+"T0050 PHONE CALL TO CP"+chr(9)+"T0051 PHONE CALL FR CP"+chr(9)+"T0052 PHONE CALL RET TO CP"+chr(9)+"T0053 PHONE CALL RET FR CP"+chr(9)+"T0054 PHONE CALL ATMPT TO RET TO CP"+chr(9)+"T0093 CONTACT WITH CP SPOUSE"+chr(9)+"T0101 PHONE CONTACT CP'S ATTORNEY"+chr(9)+"T0201 CONTACT WITH CP EMPLOYER"+chr(9)+"M3910 INTERVIEW WITH CP", contact_type_CP
@@ -69,6 +72,7 @@ BeginDialog contact_dialog, 0, 0, 381, 295, "Client contact"
 EndDialog
 
 
+'DIM row, col, EMSearch, EMReadScreen
 
 'THE SCRIPT----------------------------------------------------------------------------------------------------
 
@@ -79,52 +83,53 @@ EMConnect ""
 row = 1
 col = 1
 EMSearch "Case: ", row, col
-If row <> 0 then
+IF row <> 0 THEN
 	EMReadScreen PRISM_case_number, 13, row, col + 6
 	PRISM_case_number = replace(PRISM_case_number, " ", "-")
-	If isnumeric(left(PRISM_case_number, 10)) = False or isnumeric(right(PRISM_case_number, 2)) = False then PRISM_case_number = ""
-End if
+	IF isnumeric(left(PRISM_case_number, 10)) = FALSE OR isnumeric(right(PRISM_case_number, 2)) = FALSE THEN PRISM_case_number = ""
+END IF
 
 'Shows dialog, then navigates to CAAD. It will validate the PRISM case number using the custom function.
-Do
-	Do
-		Do
-			Do
+DO
+	DO
+		DO
+			DO
 				dialog contact_dialog
-				If buttonpressed = 0 then stopscript
-				call PRISM_case_number_validation(PRISM_case_number, case_number_valid)
-				If case_number_valid = False then MsgBox "Your case number is not valid. Please make sure it uses the following format: ''XXXXXXXXXX-XX''"
-			Loop until case_number_valid = True
-			If ((contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "")) = False then MsgBox("Please select one (and only one) of the contact type options.")
-		Loop until (contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "")
-		If isdate(date_of_contact) = False then MsgBox "You must put a valid date in as the date of contact. Please try again."
-	Loop until isdate(date_of_contact) = True
-	call navigate_to_PRISM_screen("CAAD")
+				IF buttonpressed = 0 THEN stopscript
+				CALL PRISM_case_number_validation(PRISM_case_number, case_number_valid)
+				IF case_number_valid = FALSE THEN MsgBox "Your case number is not valid. Please make sure it uses the following format: ''XXXXXXXXXX-XX''"
+			LOOP UNTIL case_number_valid = TRUE
+			IF ((contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "")) = False then MsgBox("Please select one (and only one) of the contact type options.")
+		LOOP UNTIL (contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "") or (contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "")
+		IF isdate(date_of_contact) = FALSE THEN MsgBox "You must put a valid date in as the date of contact. Please try again."
+	LOOP UNTIL isdate(date_of_contact) = TRUE
+	CALL navigate_to_PRISM_screen("CAAD")
 	EMWriteScreen "A", 8, 5
 	transmit
 	EMReadScreen case_activity_detail, 20, 2, 29
-	If case_activity_detail <> "Case Activity Detail" then MsgBox "The script could not navigate to a case note. You might be locked out of your case. Navigate to a blank case note and try again."
-Loop until case_activity_detail = "Case Activity Detail"
+	IF case_activity_detail <> "Case Activity Detail" THEN MsgBox "The script could not navigate to a case note. You might be locked out of your case. Navigate to a blank case note and try again."
+LOOP UNTIL case_activity_detail = "Case Activity Detail"
 
 'Determining which of the three contact_type editboxes contains info, and then making that the "contact_type" variable
-If contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "" then contact_type = contact_type_CP
-If contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "" then contact_type = contact_type_NCP
-If contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "" then contact_type = contact_type_other
+IF contact_type_CP <> "" and contact_type_NCP = "" and contact_type_other = "" THEN contact_type = contact_type_CP
+IF contact_type_CP = "" and contact_type_NCP <> "" and contact_type_other = "" THEN contact_type = contact_type_NCP
+IF contact_type_CP = "" and contact_type_NCP = "" and contact_type_other <> "" THEN contact_type = contact_type_other
 
 'Writing the case note
+'Contact date is now included in body of text.  Script does not change Activty Date
 EMWriteScreen left(contact_type, 5), 4, 54				'The contact type (only need the left 5 characters)
-EMWriteScreen date_of_contact, 4, 37					'Writing the contact date as the activity date on CAAD
+
 EMSetCursor 16, 4 								'Because the PRISM case note functions require the cursor to start here
-If issue <> "" then call write_editbox_in_PRISM_case_note("Issue/subject", issue, 5)
-If verified_ID_check = 1 then call write_new_line_in_PRISM_case_note("* Verified ID.")
-If actions_taken <> "" then call write_editbox_in_PRISM_case_note("Actions taken", actions_taken, 5)
-If verifs_needed <> "" then call write_editbox_in_PRISM_case_note("Verifs needed", verifs_needed, 5)
-If special_instructions_for_client <> "" then call write_editbox_in_PRISM_case_note("Special Instructions for Client", special_instructions_for_client, 5)
-If case_status <> "" then call write_editbox_in_PRISM_case_note("Case status", case_status, 5)
-If left_generic_message_check = 1 then call write_new_line_in_PRISM_case_note("* Left client a generic message requesting a return call.")
-If phone_number <> "" then call write_editbox_in_PRISM_case_note("Phone number", phone_number, 5)
-If time_contact_was_made <> "" then call write_editbox_in_PRISM_case_note("Time contact was made", time_contact_was_made, 5)
-call write_new_line_in_PRISM_case_note("---")
-call write_new_line_in_PRISM_case_note(worker_signature)
+IF issue <> "" THEN CALL write_bullet_and_variable_in_CAAD("Issue/subject", issue)
+CALL write_bullet_and_variable_in_CAAD("Date of Contact", date_of_contact & ", " & time_contact_was_made)
+IF verified_ID_check = 1 THEN CALL write_variable_in_CAAD("* Verified ID.")
+IF actions_taken <> "" THEN CALL write_bullet_and_variable_in_CAAD("Actions taken", actions_taken)
+IF verifs_needed <> "" THEN CALL write_bullet_and_variable_in_CAAD("Verifs needed", verifs_needed)
+IF special_instructions_for_client <> "" THEN CALL write_bullet_and_variable_in_CAAD("Special Instructions for Client", special_instructions_for_client)
+IF case_status <> "" THEN CALL write_bullet_and_variable_in_CAAD("Case status", case_status)
+IF left_generic_message_check = 1 THEN CALL write_variable_in_CAAD("* Left client a generic message requesting a return call.")
+IF phone_number <> "" THEN CALL write_bullet_and_variable_in_CAAD("Phone number", phone_number)
+CALL write_variable_in_CAAD("---")
+CALL write_variable_in_CAAD(worker_signature)
 
 script_end_procedure("")

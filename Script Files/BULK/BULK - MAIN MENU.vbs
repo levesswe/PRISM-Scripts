@@ -29,13 +29,15 @@ ELSE														'Error message, tells user to try to reach github.com, otherwi
 END IF
 
 'DIALOGS---------------------------------------------------------------------------
-BeginDialog BULK_main_menu_dialog, 0, 0, 351, 95, "BULK main menu dialog"
+BeginDialog BULK_main_menu_dialog, 0, 0, 351, 110, "BULK main menu dialog"
   ButtonGroup ButtonPressed
     PushButton 10, 15, 60, 10, "CALI to Excel", BULK_cali_to_excel_button
-    PushButton 10, 45, 60, 10, "Evaluate NOCS", BULK_evaluate_nocs_button
-    CancelButton 295, 75, 50, 15
+    PushButton 10, 40, 60, 10, "Case Transfer", BULK_case_transfer_button
+    PushButton 10, 65, 60, 10, "Evaluate NOCS", BULK_evaluate_nocs_button
+    CancelButton 295, 90, 50, 15
   Text 80, 15, 265, 20, "This script builds a list in Microsoft Excel of case numbers, function types, program codes, interstate codes, and parent names."
-  Text 80, 45, 260, 10, "This script evaluates D0800 worklist items for continued services."
+  Text 80, 40, 265, 20, "-- NEW!!! 07/2015  This script allows users to transfer up to 15 cases to as many workers as they need."
+  Text 80, 65, 260, 10, "This script evaluates D0800 worklist items for continued services."
 EndDialog
 
 
@@ -45,4 +47,5 @@ EndDialog
 Dialog BULK_main_menu_dialog
 If buttonpressed = cancel then StopScript
 IF ButtonPressed = BULK_cali_to_excel_button THEN CALL run_from_GitHub(script_repository & "BULK/BULK - CALI TO EXCEL.vbs")
+IF ButtonPressed = BULK_case_transfer_button THEN CALL run_from_GitHub(script_repository & "BULK/BULK - CASE TRANSFER.vbs")
 IF ButtonPressed = BULK_evaluate_nocs_button then call run_from_GitHub(script_repository & "BULK/BULK - EVALUATE NOCS.vbs")

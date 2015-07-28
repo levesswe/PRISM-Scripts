@@ -29,23 +29,26 @@ ELSE														'Error message, tells user to try to reach github.com, otherwi
 END IF
 
 'DIALOGS---------------------------------------------------------------------------
-BeginDialog ACTIONS_main_menu_dialog, 0, 0, 306, 95, "ACTIONS main menu dialog"
+BeginDialog ACTIONS_main_menu_dialog, 0, 0, 306, 145, "ACTIONS main menu dialog"
   ButtonGroup ButtonPressed
-    PushButton 5, 10, 30, 10, "Intake", ACTIONS_intake_button
-    PushButton 5, 35, 60, 10, "PALC calculator", ACTIONS_PALC_calculator_button
-    PushButton 5, 55, 60, 10, "Prorate Support", ACTIONS_prorate_support_button
-    CancelButton 250, 75, 50, 15
-  Text 70, 35, 230, 10, "-- Calculates voluntary and involuntary amounts from the PALC screen."
-  Text 40, 10, 260, 15, "-- Creates various documents related to Child Support intake, as well as DORD documents, and enters a note on CAAD."
-  Text 70, 55, 225, 10, "- Calculator for deteremining pro-rated support for partial months."
+    PushButton 5, 10, 70, 10, "Find Name on CALI", ACTIONS_find_name_on_cali_button
+    PushButton 5, 30, 30, 10, "Intake", ACTIONS_intake_button
+    PushButton 5, 55, 60, 10, "PALC calculator", ACTIONS_PALC_calculator_button
+    PushButton 5, 75, 60, 10, "Prorate Support", ACTIONS_prorate_support_button
+    CancelButton 250, 125, 50, 15
+  Text 80, 10, 215, 10, "-- NEW 06/2015!!! Searches CALI for a specific CP or NCP."
+  Text 70, 55, 230, 10, "-- Calculates voluntary and involuntary amounts from the PALC screen."
+  Text 40, 30, 260, 15, "-- Creates various documents related to Child Support intake, as well as DORD documents, and enters a note on CAAD."
+  Text 70, 75, 225, 10, "- Calculator for deteremining pro-rated support for partial months."
 EndDialog
+
 
 'THE SCRIPT-----------------------------------------------------------------------------------------------
 
 'Shows the dialog
 Dialog ACTIONS_main_menu_dialog
 If buttonpressed = cancel then stopscript
+IF BUttonPressed = ACTIONS_find_name_on_cali_button THEN CALL run_from_GitHub(script_repository & "ACTIONS/ACTIONS - FIND NAME ON CALI.vbs")
 IF ButtonPressed = ACTIONS_prorate_support_button THEN call run_from_GitHub(script_repository & "ACTIONS/ACTIONS - PRORATE SUPPORT.vbs")
 IF ButtonPressed = ACTIONS_intake_button then call run_from_GitHub(script_repository & "ACTIONS/ACTIONS - INTAKE.vbs")
 IF ButtonPressed = ACTIONS_PALC_calculator_button then call run_from_GitHub(script_repository & "ACTIONS/ACTIONS - PALC CALCULATOR.vbs")
-

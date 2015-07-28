@@ -104,6 +104,15 @@ FUNCTION create_mainframe_friendly_date(date_variable, screen_row, screen_col, y
 	EMWriteScreen var_year, screen_row, screen_col + 6
 END FUNCTION
 
+FUNCTION date_converter_PALC_PAPL (date_variable)
+
+	date_year = left (date_variable, 2)
+	date_day = right (date_variable, 2)
+	date_month = right (left (date_variable, 4), 2)
+	
+	date_variable = date_month & "/" & date_day & "/" & date_year 
+END FUNCTION
+
 Function end_excel_and_script
   objExcel.Workbooks.Close
   objExcel.quit
