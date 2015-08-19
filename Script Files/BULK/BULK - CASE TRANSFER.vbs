@@ -35,29 +35,31 @@ ELSE														'Error message, tells user to try to reach github.com, otherwi
 			StopScript
 END IF
 
-BeginDialog worker_numbers_dlg, 0, 0, 231, 190, "Enter Worker Numbers"
-  Text 10, 10, 210, 10, "Please enter a list of CSO Worker Numbers to transfer cases to. "
-  Text 10, 30, 210, 30, "NOTE: You can enter either the 8-digit Worker ID or the 11-digit code (County, Office Team, Position). The script can decipher between the different numbers."
-  Text 10, 70, 210, 20, "The script will give you a list of workers that are not found in PRISM."
-  Text 10, 100, 125, 10, "Separate each worker with a comma."
-  EditBox 10, 120, 210, 15, worker_list
-  CheckBox 10, 145, 210, 10, "Check HERE to transfer a caseload from one user to another.", transfer_all_cases_check
+'===== DIALOGS =====
+BeginDialog run_mode_dlg, 0, 0, 266, 60, "Select Run Mode"
+  DropListBox 135, 10, 125, 15, "Select one..."+chr(9)+"Specify Cases to Transfer"+chr(9)+"Transfer Caseload Top to Bottom", script_run_mode
   ButtonGroup ButtonPressed
-    OkButton 125, 170, 50, 15
-    CancelButton 175, 170, 50, 15
+    OkButton 160, 40, 50, 15
+    CancelButton 210, 40, 50, 15
+  Text 10, 10, 125, 10, "Select a mode for this script to run."
 EndDialog
 
-BeginDialog transfer_all_cases_dlg, 0, 0, 191, 130, "Enter Worker Numbers"
-  EditBox 90, 55, 75, 15, transfer_from
-  EditBox 90, 75, 75, 15, transfer_to
+BeginDialog list_of_workers_dlg, 0, 0, 266, 135, "Enter List of Workers/Positions"
+  EditBox 5, 80, 255, 15, worker_list
   ButtonGroup ButtonPressed
-    OkButton 80, 110, 50, 15
-    CancelButton 130, 110, 50, 15
-  Text 10, 15, 175, 25, "You can enter either the 8-digit worker number or the 11-digit position number. The script will sort it out."
-  Text 10, 60, 75, 10, "Transfer Cases From:"
-  Text 10, 80, 65, 10, "Transfer Cases To:"
+    OkButton 160, 115, 50, 15
+    CancelButton 210, 115, 50, 15
+  Text 10, 10, 245, 25, "Please enter a list of 8-digit worker numbers or 11-digit position numbers. You can use either the 8-digit number or the 11-digit number (the script can sort it out)."
+  Text 10, 45, 250, 20, "You can also enter multiple worker or position numbers if you separate each with a comma."
 EndDialog
 
+BeginDialog number_of_workers_dlg, 0, 0, 226, 65, "How many workers?"
+  EditBox 185, 15, 35, 15, number_of_workers
+  ButtonGroup ButtonPressed
+    OkButton 120, 45, 50, 15
+    CancelButton 170, 45, 50, 15
+  Text 10, 20, 160, 10, "Enter the number of workers to receive cases..."
+EndDialog
 
 '===== CUSTOM FUNCTION FOR DIALOGS FOR EACH WORKER
 FUNCTION create_case_numbers_dlg(i, worker_array)
@@ -91,19 +93,62 @@ FUNCTION create_case_numbers_dlg(i, worker_array)
 		IF ButtonPressed = stop_script_button THEN stopscript
 END FUNCTION 
 
+'===== FUNCTION THAT CREATES DYNAMIC DIALOG =====
+FUNCTION create_transfer_caseload_dlg(transfer_from, number_of_workers, transfer_to_worker_array, evenly_distribute_check)
+
+	ReDim transfer_to_worker_array(number_of_workers - 1, 3)
+	'	>>>>> transfer_to_worker_array(i, 0) >> worker position
+	'	>>>>> transfer_to_worker_array(i, 1) >> number of cases to go to each worker
+	'	>>>>> transfer_to_worker_array(i, 2) >> worker name
+	'	>>>>> transfer_to_worker_array(i, 3) >> array of cases to go to that worker
+
+    BeginDialog transfer_all_cases_dlg, 0, 0, 251, 175 + (20 * (number_of_workers - 1)), "Enter Worker Numbers"
+      Text 10, 15, 230, 20, "You can enter either the 8-digit worker number or the 11-digit position number. The script will sort it out."
+      Text 10, 55, 75, 10, "Transfer Cases From:"
+      Text 25, 105, 180, 10, "Alternatively, you can enter the number of cases below."
+      EditBox 90, 50, 75, 15, transfer_from
+      CheckBox 15, 90, 225, 10, "Check HERE to distribute cases evenly among the workers below.", evenly_distribute_check
+      GroupBox 5, 75, 240, 70 + (20 * (number_of_workers - 1)), "Transfer Cases To"
+      FOR i = 0 to (number_of_workers - 1)
+        EditBox 60, 125 + (20 * i), 75, 15, transfer_to_worker_array(i, 0)
+        EditBox 190, 125 + (20 * i), 30, 15, transfer_to_worker_array(i, 1)
+        Text 20, 130 + (20 * i), 30, 10, "Worker:"
+        Text 145, 130 + (20 * i), 40, 10, "# of Cases"
+      NEXT
+      ButtonGroup ButtonPressed
+        OkButton 145, 155 + (20 * (number_of_workers - 1)), 50, 15
+        CancelButton 195, 155 + (20 * (number_of_workers - 1)), 50, 15
+    EndDialog
+
+	DIALOG transfer_all_cases_dlg
+
+END FUNCTION
+
 
 '===== THE SCRIPT =====
 EMConnect ""
-CALL check_for_PRISM(False)
+CALL check_for_PRISM(True)
 
-DIALOG worker_numbers_dlg
-	IF ButtonPressed = stop_script_button THEN stopscript
-	IF InStr(worker_list, "UUDDLRLRBA") <> 0 THEN 
-		developer_mode = True
-		MsgBox "Developer mode enabled."
-	END IF
+' >>>>> BACKING OUT TO MAIN MENU <<<<<
+DO
+	PF3
+	EMReadScreen at_the_main_menu, 9, 2, 34
+LOOP UNTIL at_the_main_menu = "Main Menu"
 
-IF transfer_all_cases_check = 0 THEN 
+DO
+	DIALOG run_mode_dlg
+		IF ButtonPressed = stop_script_button THEN stopscript
+		IF script_run_mode = "Select one..." THEN MsgBox "Please select a script run mode."
+LOOP UNTIL script_run_mode <> "Select one..."
+
+IF script_run_mode = "Specify Cases to Transfer" THEN 
+	DIALOG list_of_workers_dlg
+		IF ButtonPressed = 0 THEN stopscript
+		IF InStr(worker_list, "UUDDLRLRBA") <> 0 THEN 
+			developer_mode = True
+			MsgBox "Developer mode enabled."
+		END IF
+
 	worker_list = replace(worker_list, " ", "")
 	worker_list = split(worker_list, ",")
 	
@@ -122,6 +167,7 @@ IF transfer_all_cases_check = 0 THEN
 		IF len(worker_array(i, 0)) = 8 THEN 
 			'If the length of the worker number is 8 then the script goes to CALI to gather the 11-digit worker position number.
 			CALL navigate_to_PRISM_screen("CALI")
+			CALL check_for_PRISM(False)
 			EMWriteScreen left(worker_array(i, 0), 3), 20, 18
 			EMWriteScreen "001", 20, 30
 			transmit
@@ -147,6 +193,7 @@ IF transfer_all_cases_check = 0 THEN
 					worker_array(i, 0) = CALI_position
 					PF3
 					CALL create_case_numbers_dlg(i, worker_array)
+					CALL check_for_PRISM(False)
 					EXIT DO
 				ELSE
 					CALI_row = CALI_row + 1
@@ -190,13 +237,10 @@ IF transfer_all_cases_check = 0 THEN
 					CAAS_office = right(left(worker_array(i, 0), 6), 3)
 					CAAS_team = left(right(worker_array(i, 0), 5), 3)
 					CAAS_position = right(worker_array(i, 0), 2)
-					
-					EMWriteScreen "D", 3, 29
-					EMwriteScreen left(worker_array(i, j), 10), 4, 8
-					EMWriteScreen right(worker_array(i, j), 2), 4, 19
-					transmit
-					
+									
 					EMWriteScreen "M", 3, 29
+					EMWriteScreen left(worker_array(i, j), 10), 4, 8
+					EMWriteScreen right(worker_array(i, j), 2), 4, 19
 					EMWriteScreen CAAS_county, 9, 20
 					EMWriteScreen CAAS_office, 10, 20
 					EMWriteScreen CAAS_team, 11, 20
@@ -219,24 +263,43 @@ IF transfer_all_cases_check = 0 THEN
 	'Displaying the list of workers that were skipped because they could not be found.
 	IF err_workers <> "" THEN MsgBox ("*** NOTICE!!! ***" & vbCr & vbCr & "The script could not transfer cases to the following worker ID/code(s): " & vbCr & err_workers & vbCr & vbCr & "The script has determined that ID/code is not a valid ID/code assigned to a worker. You may need to reconsider the worker ID/code you selected and try again." & vbCr & vbCr & "If the script erred in its determination of valid worker ID/codes, please report this to your scripts administrator." & vbCr & vbCr & "Thank you.")
 
-ELSEIF transfer_all_cases_check = 1 THEN 
+ELSEIF script_run_mode = "Transfer Caseload Top to Bottom" THEN 
+
+	'Clearing the memory.
+	CALL navigate_to_PRISM_screen("REGL")
+	transmit
+	
+	DO
+		DIALOG number_of_workers_dlg
+			IF ButtonPressed = 0 THEN stopscript
+			IF left(number_of_workers, 10) = "UUDDLRLRBA" THEN 
+				developer_mode = True
+				MsgBox "Developer mode enabled."
+				number_of_workers = right(number_of_workers, len(number_of_workers) - 10)
+				number_of_workers = trim(number_of_workers)
+			END IF
+	LOOP UNTIL IsNumeric(number_of_workers) = True
 	DO
 		DO
 			DO
 				err_msg = ""
-				DIALOG transfer_all_cases_dlg
+				CALL create_transfer_caseload_dlg(transfer_from, number_of_workers, transfer_to_worker_array, evenly_distribute_check)
 					IF ButtonPressed = 0 THEN stopscript
 					transfer_from = trim(transfer_from)
-					transfer_to = trim(transfer_to)
 					IF transfer_from = "" THEN err_msg = err_msg & vbCr & "* Please enter a valid worker/position number to transfer cases FROM."
-					IF transfer_to = "" THEN err_msg = err_msg & vbCr & "* Please enter a valid worker/position number to transfer cases TO."
+					IF transfer_to_worker_array(0, 0) = "" THEN err_msg = err_msg & vbCr & "* Please enter a valid worker/position number to transfer cases TO. You  must pick at least 1."
 					IF err_msg <> "" THEN MsgBox "*** NOTICE!!! ***" & vbCr & err_msg & vbCr & vbCr & "Please resolve for the script to continue."
 			LOOP UNTIL err_msg = "" 
+			
+			' >>>>> CLEARING CACHED MEMORY IN PRISM <<<<<
+			CALL navigate_to_PRISM_screen("REGL")
+			transmit
 			
 			'Getting the worker names for the confirmation message
 			IF len(transfer_from) = 8 THEN 
 				'If the length of the worker number is 8 then the script goes to CALI to gather the 11-digit worker position number.
 				CALL navigate_to_PRISM_screen("CALI")
+				CALL check_for_PRISM(False)
 				EMWriteScreen left(transfer_from, 3), 20, 18
 				EMWriteScreen "001", 20, 30
 				transmit
@@ -254,6 +317,7 @@ ELSEIF transfer_all_cases_check = 1 THEN
 						transfer_from_name = "WORKER NOT FOUND"
 						EXIT DO
 					END IF
+					
 					IF UCASE(worker_id) = UCASE(transfer_from) THEN 
 						EMReadScreen transfer_from_name, 30, CALI_row, 49
 						transfer_from_name = trim(transfer_from_name)
@@ -269,7 +333,7 @@ ELSEIF transfer_all_cases_check = 1 THEN
 							CALI_row = 13
 						END IF
 					END IF
-				LOOP		
+				LOOP
 			ELSEIF len(transfer_from) = 11 THEN
 				CALL navigate_to_PRISM_screen("CALI")
 				EMSetCursor 20, 18
@@ -285,84 +349,167 @@ ELSEIF transfer_all_cases_check = 1 THEN
 				ELSEIF error_message_on_bottom_of_screen <> "" THEN 
 					transfer_from_name = "WORKER NOT FOUND"
 				END IF
-			ELSE
+			ELSEIF len(transfer_from) <> 8 AND len(transfer_from) <> 11 THEN 
 				transfer_from_name = "WORKER NOT FOUND"
 			END IF
-			
+
 			'Getting the worker names for the confirmation message
-			IF len(transfer_to) = 8 THEN 
-				'If the length of the worker number is 8 then the script goes to CALI to gather the 11-digit worker position number.
-				CALL navigate_to_PRISM_screen("CALI")
-				EMWriteScreen left(transfer_to, 3), 20, 18
-				EMWriteScreen "001", 20, 30
+			FOR i = 0 to (number_of_workers - 1)
+				' >>>>> RESETING PRISM MEMORY <<<<<
+				CALL navigate_to_PRISM_screen("REGL")
 				transmit
-				
-				EMSetCursor 20, 49
-				EMSendKey "X"
-		
-				PF1
-				
-				CALI_row = 13
-				DO
-					EMReadScreen worker_id, 8, CALI_row, 39
-					EMReadScreen end_of_data, 11, CALI_row, 39
-					IF end_of_data = "End of Data" THEN 
-						transfer_from_name = "WORKER NOT FOUND"
-						EXIT DO
-					END IF
-					IF UCASE(worker_id) = UCASE(transfer_to) THEN 
-						EMReadScreen transfer_to_name, 30, CALI_row, 49
-						transfer_to_name = trim(transfer_to_name)
-						EMReadScreen CALI_position, 20, CALI_row, 18
-						CALI_position = replace(CALI_position, " ", "")
-						transfer_to_position_number = CALI_position
-						PF3
-						EXIT DO
-					ELSE
-						CALI_row = CALI_row + 1
-						IF CALI_row = 19 THEN 
-							PF8
-							CALI_row = 13
+			
+				transfer_to = transfer_to_worker_array(i, 0)
+				IF len(transfer_to) = 8 THEN 
+					'If the length of the worker number is 8 then the script goes to CALI to gather the 11-digit worker position number.
+					CALL navigate_to_PRISM_screen("CALI")
+					EMWriteScreen left(transfer_to, 3), 20, 18
+					EMWriteScreen "001", 20, 30
+					EMWriteScreen "___", 20, 40
+					EMWriteScreen "__", 20, 49
+					transmit
+					
+					EMSetCursor 20, 49
+					EMSendKey "X"
+			
+					PF1
+					
+					CALI_row = 13
+					DO
+						EMReadScreen worker_id, 8, CALI_row, 39
+						EMReadScreen end_of_data, 11, CALI_row, 39
+						IF end_of_data = "End of Data" THEN 
+							transfer_to_name = "WORKER NOT FOUND"
+							EXIT DO
 						END IF
+						IF UCASE(worker_id) = UCASE(transfer_to) THEN 
+							EMReadScreen transfer_to_name, 30, CALI_row, 49
+							transfer_to_name = trim(transfer_to_name)
+							EMReadScreen CALI_position, 20, CALI_row, 18
+							CALI_position = replace(CALI_position, " ", "")
+							transfer_to_position_number = CALI_position
+							PF3
+							EXIT DO
+						ELSE
+							CALI_row = CALI_row + 1
+							IF CALI_row = 19 THEN 
+								PF8
+								CALI_row = 13
+							END IF
+						END IF
+					LOOP		
+				ELSEIF len(transfer_to) = 11 THEN
+					CALL navigate_to_PRISM_screen("CALI")
+					EMSetCursor 20, 18
+					EMSendKey transfer_to
+					transmit
+					EMReadScreen error_message_on_bottom_of_screen, 20, 24, 2
+					error_message_on_bottom_of_screen = trim(error_message_on_bottom_of_screen)
+					IF InStr(error_message_on_bottom_of_screen, "not found") = 0 THEN 
+						EMReadScreen transfer_to_name, 30, 4, 28
+						transfer_to_name = trim(transfer_to_name)
+						transfer_to_position_number = transfer_to
+					ELSEIF InStr(error_message_on_bottom_of_screen, "not found") <> 0 THEN 
+						transfer_to_name = "WORKER NOT FOUND"
 					END IF
-				LOOP		
-			ELSEIF len(transfer_to) = 11 THEN
-				CALL navigate_to_PRISM_screen("CALI")
-				EMSetCursor 20, 18
-				EMSendKey transfer_to
-				transmit
-				
-				EMReadScreen error_message_on_bottom_of_screen, 20, 24, 2
-				error_message_on_bottom_of_screen = trim(error_message_on_bottom_of_screen)
-				IF error_message_on_bottom_of_screen = "" THEN 
-					CALL find_variable("Name: ", transfer_to_name, 30)
-					transfer_to_name = trim(transfer_to_name)
-					transfer_to_position_number = transfer_to
-				ELSEIF error_message_on_bottom_of_screen <> "" THEN 
+				ELSE
 					transfer_to_name = "WORKER NOT FOUND"
 				END IF
-			ELSE
-				transfer_to_name = "WORKER NOT FOUND"
-			END IF
+	
+				transfer_to_worker_array(i, 0) = transfer_to_position_number
+				transfer_to_worker_array(i, 2) = transfer_to_name
+			NEXT
 			
-			IF transfer_to_name = "WORKER NOT FOUND" THEN MsgBox "Worker " & transfer_to & " not found. Please try again."
-			IF transfer_from_name = "WORKER NOT FOUND" THEN MsgBox "Worker " & transfer_from & " not found. Please try again."
-			
-		LOOP UNTIL transfer_from_name <> "WORKER NOT FOUND" AND transfer_to_name <> "WORKER NOT FOUND"
+			err_msg = ""
+			IF transfer_from_name = "WORKER NOT FOUND" THEN err_msg = err_msg & vbCr & "* Transfer FROM worker -- " & transfer_from & " -- not found."
+			FOR i = 0 TO (number_of_workers - 1)
+				IF transfer_to_worker_array(i, 2) = "WORKER NOT FOUND" THEN err_msg = err_msg & vbCr & "* Worker " & transfer_to_worker_array(i, 0) & " not found."
+			NEXT
+				
+			IF err_msg <> "" THEN MsgBox "*** NOTICE!!! ***" & vbCr & err_msg & vbCr & vbCr & "Please resolve for the script to continue."
+				
+		LOOP UNTIL err_msg = ""
 		
-		confirmation_message = MsgBox("*** PLEASE CONFIRM ***" & vbCr & "Transfer FROM Caseload: " & transfer_from_name & " (" & transfer_from_position_number & ")" & vbCr & "Transfer TO Caseload: " & transfer_to_name & " (" & transfer_to_position_number & ")." & vbCr & vbCr & "Is this correct? Press YES to continue, press NO to retry.", vbYesNo)		
-
+		please_confirm = "*** PLEASE CONFIRM ***" & vbCr & "Transfer FROM Caseload: " & transfer_from_name &  " (" & transfer_from_position_number & ")"
+		FOR i = 0 to (number_of_workers - 1)
+			please_confirm = please_confirm & vbCr & "Transfer TO Caseload: " & transfer_to_worker_array(i, 2) & " (" & transfer_to_worker_array(i, 0) & ")."
+		NEXT
+		
+		confirmation_message = MsgBox(please_confirm & vbCr & vbCr & "Is this correct? Press YES to continue, press NO to retry.", vbYesNoCancel)		
+		IF confirmation_message = vbCancel THEN stopscript
 	LOOP UNTIL confirmation_message = vbYes
 
-	'>>>> Now going to TRANSFER FROM to gather all cases.
-	CALL navigate_to_PRISM_screen("CALI")
-	EMSetCursor 20, 18
-	EMSendKey transfer_from_position_number
-	transmit
-	
-	IF developer_mode = True THEN 
+	IF evenly_distribute_check = 1 THEN 
+		'>>>> Now going to TRANSFER FROM to determine the number of cases.
+		CALL navigate_to_PRISM_screen("CALI")
+		EMSetCursor 20, 18
+		EMSendKey transfer_from_position_number
+		transmit
+		DO
+			PF7
+			EMReadScreen top_of_scroll_session, 21, 24, 2
+		LOOP UNTIL top_of_scroll_session = "Top of scroll session"
+		
 		Set objExcel = CreateObject("Excel.Application")
-		objExcel.Visible = True
+		objExcel.Visible = False
+		Set objWorkbook = objExcel.Workbooks.Add()
+		objExcel.DisplayAlerts = True
+		objExcel.Caption = "Cases Transferred " & transfer_from & ": " & date
+		
+		objExcel.Cells(1, 1).Value = "CASES TO TRANSFER"
+		objExcel.Cells(1, 1).Font.Bold = True
+		objExcel.Columns(1).AutoFit()
+		objExcel.Cells(1, 2).Value = "CASES TRANSFERRED"
+		objExcel.Cells(1, 2).Font.Bold = True
+		objExcel.Columns(2).AutoFit()
+		objExcel.Cells(1, 3).Value = "TRANSFER TO"
+		objExcel.Cells(1, 3).Font.Bold = True
+		objExcel.Columns(3).AutoFit()
+		
+		objExcel.Cells(1, 4).Value = "TRANSFER FROM"
+		objExcel.Cells(1, 5).Value = transfer_from
+		
+		excel_row = 2
+		
+		total_number_of_cases = 0
+
+		CALI_row = 8
+		DO
+			EMReadScreen end_of_data, 11, CALI_row, 32
+			IF end_of_data <> "End of Data" THEN 
+				number_of_cases = number_of_cases + 1
+			ELSEIF end_of_data = "End of Data" THEN 
+				EXIT DO
+			END IF
+			CALI_row = CALI_row + 1
+			IF CALI_row = 19 THEN 
+				CALI_row = 8
+				PF8
+			END IF		
+		LOOP UNTIL end_of_data = "End of Data"
+	
+		'Determining how many cases need to go to each worker.
+		cases_per_worker = number_of_cases / number_of_workers
+		total_transferred_cases = 0
+		FOR i = 0 to (number_of_workers - 1)
+			transfer_to_worker_array(i, 1) = Int(cases_per_worker)
+			total_transferred_cases = total_transferred_cases + transfer_to_worker_array(i, 1)
+		NEXT
+	
+		'If the number of cases is not evenly divisible by the total transferred cases, the script starts
+		'	randomly assigning additional cases to workers.
+		IF number_of_cases <> total_transferred_cases THEN 
+			DO
+				Randomize
+				worker_to_transfer = Int((number_of_workers * Rnd) + 1)
+				transfer_to_worker_array(worker_to_transfer - 1, 1) = transfer_to_worker_array(worker_to_transfer - 1, 1) + 1		
+		
+				total_transferred_cases = total_transferred_cases + 1
+			LOOP UNTIL total_transferred_cases = number_of_cases
+		END IF
+	ELSE
+		Set objExcel = CreateObject("Excel.Application")
+		objExcel.Visible = False
 		Set objWorkbook = objExcel.Workbooks.Add()
 		objExcel.DisplayAlerts = True
 		objExcel.Cells(1, 1).Value = "CASES TO TRANSFER"
@@ -371,58 +518,101 @@ ELSEIF transfer_all_cases_check = 1 THEN
 		objExcel.Cells(1, 2).Value = "CASES TRANSFERRED"
 		objExcel.Cells(1, 2).Font.Bold = True
 		objExcel.Columns(2).AutoFit()
+		objExcel.Cells(1, 3).Value = "TRANSFER TO"
+		objExcel.Cells(1, 3).Font.Bold = True
+		objExcel.Columns(3).AutoFit()
+		objExcel.Caption = "Cases Transferred " & transfer_from & ": " & date
+		
+		objExcel.Cells(1, 4).Value = "TRANSFER FROM"
+		objExcel.Cells(1, 5).Value = transfer_from
+		
 		excel_row = 2
+		
 	END IF
 	
-	CALI_row = 8
+	PF3
+	'>>>> Now going to TRANSFER FROM to gather all cases.
+	CALL navigate_to_PRISM_screen("CALI")
+	EMSetCursor 20, 18
+	EMSendKey transfer_from_position_number
+	transmit
 	DO
-		EMReadScreen end_of_data, 11, CALI_row, 32
-		EMReadScreen case_number, 14, CALI_row, 7
-		case_number = replace(case_number, " ", "")
-		IF end_of_data <> "End of Data" THEN 
-			all_cases_array = all_cases_array & case_number & "~~~"
-			IF developer_mode = True THEN 
+		PF7
+		EMReadScreen top_of_scroll_session, 21, 24, 2
+	LOOP UNTIL top_of_scroll_session = "Top of scroll session"
+	
+	'Assigning an array to each worker of cases to transfer.
+	CALI_row = 8
+	FOR i = 0 TO (number_of_workers - 1)
+		number_of_cases_to_this_worker = transfer_to_worker_array(i, 1)
+		all_cases_array = ""
+		msgbox "Assigning " & number_of_cases_to_this_worker & " to " & transfer_to_worker_array(i, 0)
+		FOR j = 1 TO number_of_cases_to_this_worker
+			EMReadScreen end_of_data, 11, CALI_row, 32
+			EMReadScreen case_number, 14, CALI_row, 7
+			case_number = replace(case_number, " ", "")
+			IF end_of_data <> "End of Data" THEN 
+				all_cases_array = all_cases_array & case_number & "~~~"
 				objExcel.Cells(excel_row, 1).Value = case_number
 				excel_row = excel_row + 1
+			ELSEIF end_of_data = "End of Data" THEN 
+				EXIT FOR
 			END IF
-		ELSEIF end_of_data = "End of Data" THEN 
-			EXIT DO
-		END IF
-		CALI_row = CALI_row + 1
-		IF CALI_row = 19 THEN 
-			CALI_row = 8
-			PF8
-		END IF		
-	LOOP UNTIL end_of_data = "End of Data"
-	
-	all_cases_array = trim(all_cases_array)
-	all_cases_array = split(all_cases_array, "~~~")
-	
-	IF developer_mode = True THEN excel_row = 2
-	
-	CALL navigate_to_PRISM_screen("CAAS")
-	FOR EACH PRISM_case_number IN all_cases_array
-		IF PRISM_case_number <> "" THEN 
-			EMSetCursor 3, 29
-			EMSendKey "D"
-			EMSendKey PRISM_case_number
-			transmit
-			
-			EMWriteScreen "M", 3, 29
-			EMSetCursor 9, 20
-			EMSendKey transfer_to_position_number
-			IF developer_mode = False THEN 
-				DO
-					transmit
-					EMReadScreen confirmation_message, 70, 24, 2
-				LOOP UNTIL InStr(confirmation_message, "modified successfully") <> 0
-			ELSEIF developer_mode = True THEN 
-				objExcel.Cells(excel_row, 2).Value = PRISM_case_number
-				excel_row = excel_row + 1
-			END IF
-		END IF
+			CALI_row = CALI_row + 1
+			IF CALI_row = 19 THEN 
+				CALI_row = 8
+				PF8
+			END IF		
+		NEXT
+		transfer_to_worker_array(i, 3) = all_cases_array
 	NEXT
+
+	excel_row = 2
+
+	CALL navigate_to_PRISM_screen("CAAS")
+	FOR i = 0 TO (number_of_workers - 1)
+		cases_to_transfer_array = transfer_to_worker_array(i, 3)
+		cases_to_transfer_array = trim(cases_to_transfer_array)
+		cases_to_transfer_array = split(cases_to_transfer_array, "~~~")
+		
+		FOR EACH PRISM_case_number IN cases_to_transfer_array
+			IF PRISM_case_number <> "" THEN 
+				EMSetCursor 3, 29
+				EMSendKey "D"
+				EMSendKey PRISM_case_number
+				transmit
+				
+				EMReadScreen access_denied, 60, 24, 2
+				
+				IF InStr(access_denied, "Access denied") = 0 THEN 				
+					EMWriteScreen "M", 3, 29
+						EMSetCursor 9, 20
+						EMSendKey transfer_to_worker_array(i, 0)
+					IF developer_mode = False THEN 
+						DO
+							transmit
+							EMReadScreen confirmation_message, 70, 24, 2
+						LOOP UNTIL InStr(confirmation_message, "modified successfully") <> 0
+						objExcel.Cells(excel_row, 2).Value = PRISM_case_number
+						objExcel.Cells(excel_row, 3).Value = transfer_to_worker_array(i, 0)
+						excel_row = excel_row + 1
+					ELSEIF developer_mode = True THEN 
+						objExcel.Cells(excel_row, 2).Value = PRISM_case_number
+						objExcel.Cells(excel_row, 3).Value = transfer_to_worker_array(i, 0)
+						excel_row = excel_row + 1
+					END IF
+				END IF
+			END IF
+		NEXT
+	NEXT
+	
+	objExcel.Visible = True
 	
 END IF	
 
+
 script_end_procedure("Success!!")
+
+
+
+

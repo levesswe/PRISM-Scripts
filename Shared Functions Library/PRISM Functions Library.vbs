@@ -68,11 +68,15 @@ function back_to_SELF
 End function
 
 Function check_for_PRISM(end_script)
-	EMReadScreen PRISM_check, 5, 1, 36
-	IF end_script = True THEN 
-		If PRISM_check <> "PRISM" then script_end_procedure("You do not appear to be in PRISM. You may be passworded out. Please check your PRISM screen and try again.")
-	ELSE
-		If PRISM_check <> "PRISM" then MsgBox "You do not appear to be in PRISM. You may be passworded out."
+	PF11
+	PF10
+	CALL find_variable("PLEASE ENTER YOUR ", timed_out, 8)
+	IF timed_out = "PASSWORD" THEN 
+		IF end_script = True THEN 
+			If PRISM_check <> "PRISM" then script_end_procedure("You do not appear to be in PRISM. You may be passworded out. Please check your PRISM screen and try again.")
+		ELSE
+			If PRISM_check <> "PRISM" then MsgBox "You do not appear to be in PRISM. You may be passworded out."
+		END IF
 	END IF
 END FUNCTION
 
