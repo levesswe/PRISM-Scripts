@@ -1,10 +1,4 @@
 
-'LOADING GLOBAL VARIABLES--------------------------------------------------------------------
-Set run_another_script_fso = CreateObject("Scripting.FileSystemObject")
-Set fso_command = run_another_script_fso.OpenTextFile("Q:\Blue Zone Scripts\Child Support\locally-installed-files\~globvar.vbs")
-text_from_the_other_script = fso_command.ReadAll
-fso_command.Close
-Execute text_from_the_other_script
 
 'GATHERING STATS----------------------------------------------------------------------------------------------------
 name_of_script = "refer-to-mod.vbs"
