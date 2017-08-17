@@ -1,5 +1,4 @@
 
-
 'GATHERING STATS----------------------------------------------------------------------------------------------------
 name_of_script = "refer-to-mod.vbs"
 start_time = timer
@@ -42,7 +41,7 @@ changelog = array()
 
 'INSERT ACTUAL CHANGES HERE, WITH PARAMETERS DATE, DESCRIPTION, AND SCRIPTWRITER. **ENSURE THE MOST RECENT CHANGE GOES ON TOP!!**
 'Example: call changelog_update("01/01/2000", "The script has been updated to fix a typo on the initial dialog.", "Jane Public, Oak County")
-call changelog_update("08/15/2017", "Created edit boxes for mod worker info for collaborative version of the script.", "Wendy LeVesseur, Anoka County")
+call changelog_update("08/17/2017", "Created edit boxes for mod worker info for collaborative version of the script and fixed bugs.", "Wendy LeVesseur, Anoka County")
 call changelog_update("03/10/2017", "Initial version.", "Wendy LeVesseur, Anoka County")
 
 
@@ -849,6 +848,7 @@ IF update_mod_worker = checked THEN
 						EMWriteScreen mod_worker_title_txt, 16, 15
 						transmit
 						EMWriteScreen mod_worker_phone_txt, 16, 15
+						transmit
 				END IF
 
 			
@@ -900,7 +900,8 @@ If CAWD_check = checked then
 	PF5
 	EMWriteScreen "FREE", 4, 37
 	EMWriteScreen "*** Special Services assessment received from the parties?", 10, 4
-	EMWriteScreen dateadd("d", date, 7), 17, 21
+	worklist_date= dateadd("d", date, 7)
+	CALL write_date(worklist_date, "MM/DD/YYYY", 17, 21)
 	transmit
 End if
 
